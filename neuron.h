@@ -134,12 +134,14 @@ void propagate_weight_and_bias(layer* head,double learning_rate)
         }
         output_neuron->bias+=output_neuron->delta*learning_rate;
     }
+    propagate_weight_and_bias(head->next,learning_rate);
 }
 
 void print_result(double* output)
 {
     for(int i=0;i<10;i++)printf("%d:%.3f\n",i,output[i]);
 }
+
 void test()
 {
     image* images=populateImages("train");
@@ -147,16 +149,17 @@ void test()
     double answer[10];
     double error[10];
     int* randomOrder=shuffle(60000);
+
     for(int i=0;i<60000;i++)
     {
         if(i%200==0)printf("\nTraining (%d/60,000)...",i);
         assign_value(&layers[0],images[randomOrder[i]].location);
         double* output=load_answer(&layers[0]);
         for(int j=0;j<10;j++)answer[j]=-1;
-        answer[images[i].value]=1;
+        answer[images[randomOrder[i]].value]=1;
         for(int j=0;j<10;j++)error[j]=answer[j]-output[j];
         propagate_error(&layers[2],error);
-        propagate_weight_and_bias(&layers[0],0.001);
+        propagate_weight_and_bias(&layers[0],0.01);
     }
     
     for(int i=0;i<60000;i++)free(images[i].location);
@@ -164,11 +167,12 @@ void test()
     images=populateImages("test");
     while(1)
     {
-        printf("Enter an index");
+        printf("\nEnter an index:");
         int i;
         scanf("%d",&i);
         assign_value(&layers[0],images[i].location);
         double* output=load_answer(&layers[0]);
+        for(int i=0;i<10;i++)output[i]=(output[i]+1)/2;
         testPrint(images[i].location);
         print_result(output);
         printf("\n\n\n\n\n");
