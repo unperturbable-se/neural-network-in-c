@@ -36,8 +36,8 @@ void init_layer(layer* l,int population,int previousPopulation,layer* next,layer
     {
         (l->neurons[i]).bias=0;
         l->values[i]=0;
-        (l->neurons)->error=0;
-        (l->neurons)->bias=0;
+        (l->neurons[i]).error=0;
+        (l->neurons[i]).bias=0;
         (l->neurons[i]).weights=malloc(sizeof(double)*previousPopulation);
         for(int j=0;j<previousPopulation;j++)(l->neurons[i]).weights[j]=random_weight();
     }
@@ -142,7 +142,7 @@ void print_result(double* output)
     for(int i=0;i<10;i++)printf("%d:%.3f\n",i,output[i]);
 }
 
-void test()
+layer* train_dataset()
 {
     image* images=populateImages("train");
     layer* layers=init_layers();
@@ -164,20 +164,34 @@ void test()
     
     for(int i=0;i<60000;i++)free(images[i].location);
     free(images);
-    images=populateImages("test");
-    while(1)
-    {
-        printf("\nEnter an index:");
-        int i;
-        scanf("%d",&i);
-        assign_value(&layers[0],images[i].location);
-        double* output=load_answer(&layers[0]);
-        for(int i=0;i<10;i++)output[i]=(output[i]+1)/2;
-        testPrint(images[i].location);
-        print_result(output);
-        printf("\n\n\n\n\n");
+    return layers;
+}
 
+int argmax(double* output)
+{
+    double max=output[0];
+    int maxIndex=0;
+    for(int i=1;i<10;i++)
+    {
+        if(output[i]>max){max=output[i];maxIndex=i;}
     }
+    return maxIndex;
+}
+void get_accuracy(layer* layers,image* images)
+{
+    int size=7000;
+    int* randomOrder=shuffle(7000);
+    int correct=0;
+    for(int i=0;i<size;i++)
+    {
+        assign_value(&layers[0],images[randomOrder[i]].location);
+        double* output=load_answer(&layers[0]);
+        int answer=argmax(output);
+        if(answer==images[randomOrder[i]].value)correct++;
+    }
+    double accuracy=(100.0*correct)/size;
+    printf("\n%.2f percent accuracy\n",accuracy);
+
 }
 
 
