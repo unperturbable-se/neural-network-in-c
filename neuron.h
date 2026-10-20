@@ -8,6 +8,7 @@ typedef struct neuron
     double* weights;
     double bias;
     double error;
+    double delta;
 } neuron;
 
 typedef struct layer
@@ -35,6 +36,8 @@ void init_layer(layer* l,int population,int previousPopulation,layer* next,layer
     {
         (l->neurons[i]).bias=0;
         l->values[i]=0;
+        (l->neurons)->error=0;
+        (l->neurons)->bias=0;
         (l->neurons[i]).weights=malloc(sizeof(double)*previousPopulation);
         for(int j=0;j<previousPopulation;j++)(l->neurons[i]).weights[j]=random_weight();
     }
@@ -85,15 +88,92 @@ double* load_answer(layer* head)
     return load_answer(head->next);
 }
 
+void propagate_error(layer* tail,double* error) 
+{
+    if(error!=NULL)for(int i=0;i<tail->population;i++)
+    {
+        tail->neurons[i].error=error[i];
+        tail->neurons[i].delta=error[i]*(1-tail->values[i]*tail->values[i]);
+    }
+
+    if(tail->prev==NULL)return;
+    layer* prev=tail->prev;
+    //error of X0 is equivalent to (error of Y0)*(weight of X0 to Y0) where X0 is a neuron in previous layer 
+    // and Y0 is neuron in next layer
+    // since multiple neurons are in output layer you do a summation
+    for (int i=0;i<prev->population;i++)
+    {
+        neuron* n=&prev->neurons[i];
+        n->error=0;
+        for (int j=0;j<tail->population;j++)
+        {
+            double weight_of_neuron=tail->neurons[j].weights[i];
+            double total_error=tail->neurons[j].delta;
+            n->error+=weight_of_neuron*total_error;
+        }
+        n->delta=n->error*(1-prev->values[i]*prev->values[i]);
+    }
+
+    propagate_error(prev,NULL);
+}
+
+void propagate_weight_and_bias(layer* head,double learning_rate)
+{
+    if(head->next==NULL)return;
+    layer* next=head->next;
+    //weight = weight+learning rate*error of output*own value
+    for(int i=0;i<next->population;i++)
+    {
+        neuron* output_neuron= &next->neurons[i];
+        double* input_weights=output_neuron->weights;
+        for(int j=0;j<head->population;j++)
+        {
+            double output_error=output_neuron->delta;
+            double input_value=head->values[j];
+            input_weights[j]+= learning_rate*input_value*output_error;
+        }
+        output_neuron->bias+=output_neuron->delta*learning_rate;
+    }
+}
+
+void print_result(double* output)
+{
+    for(int i=0;i<10;i++)printf("%d:%.3f\n",i,output[i]);
+}
 void test()
 {
     image* images=populateImages("train");
     layer* layers=init_layers();
-    assign_value(&layers[0],images[300].location);
-    double* output=load_answer(&layers[0]);
-    for(int i=0;i<10;i++)printf("%d:%.3f\n",i,output[i]);
-    //for(int i=0;i<60000;i++)free(images[i].location);
-    //free(images);
+    double answer[10];
+    double error[10];
+    int* randomOrder=shuffle(60000);
+    for(int i=0;i<60000;i++)
+    {
+        if(i%200==0)printf("\nTraining (%d/60,000)...",i);
+        assign_value(&layers[0],images[randomOrder[i]].location);
+        double* output=load_answer(&layers[0]);
+        for(int j=0;j<10;j++)answer[j]=-1;
+        answer[images[i].value]=1;
+        for(int j=0;j<10;j++)error[j]=answer[j]-output[j];
+        propagate_error(&layers[2],error);
+        propagate_weight_and_bias(&layers[0],0.001);
+    }
+    
+    for(int i=0;i<60000;i++)free(images[i].location);
+    free(images);
+    images=populateImages("test");
+    while(1)
+    {
+        printf("Enter an index");
+        int i;
+        scanf("%d",&i);
+        assign_value(&layers[0],images[i].location);
+        double* output=load_answer(&layers[0]);
+        testPrint(images[i].location);
+        print_result(output);
+        printf("\n\n\n\n\n");
+
+    }
 }
 
 

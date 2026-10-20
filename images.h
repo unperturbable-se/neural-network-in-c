@@ -15,6 +15,24 @@ double* load_normalized_image(const char *filepath)
     return normalized_features;
 }
 
+int* shuffle(size_t n) //get random indeces(sort image in random order to get unbiased prediction)
+{
+    int* array=(int*)malloc(sizeof(int)*n);
+    for(int i=0;i<n;i++)array[i]=i;
+    if (n > 1) 
+    {
+        size_t i;
+        for (i = 0; i < n - 1; i++) 
+        {
+          size_t j = i + rand() / (RAND_MAX / (n - i) + 1);
+          int t = array[j];
+          array[j] = array[i];
+          array[i] = t;
+        }
+    }
+    return array;
+}
+
 
 void testPrint(char* filepath) 
 {
